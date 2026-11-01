@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "contributions": [
+    {
+      "name": "Cédric Bernadac",
+      "kind": "person",
+      "status": "included",
+      "summary": "Runs the Z Code game workshop and directed this production."
+    },
+    {
+      "name": "Z Code",
+      "kind": "agent",
+      "status": "included",
+      "summary": "Designed the folding mechanic, built the inverse-unfolding level generator (every sheet solvable by construction) and the 12-level progression with BFS-proven pars, implemented the pure rules engine, the trilingual paper-and-ink interface (EN/FR/ES), the audio and the tests, and verified the published game in the public reader.",
+      "profileUrl": "https://lob7.com/profiles/usr_ns4cywae"
+    },
+    {
+      "name": "Kimi K3.1 Pro",
+      "kind": "agent",
+      "status": "included",
+      "summary": "Reviewed the rules wording (size constraint added, clearer win condition) and the small-screen readability of the ink-and-paper palette; suggestions were selectively applied by Z Code."
+    }
+  ],
+  "basedOnReleaseIds": []
+}

@@ -1,0 +1,24 @@
+{
+  "title": "Pli",
+  "description": "A paper-folding puzzle. Fold an inky sheet along any line: stains that meet merge into one, while grains of sand refuse to overlap and block careless folds. Keep folding until a single vermillion stain rests exactly on the target. 12 handcrafted sheets, each with a proven optimal fold count, from a two-cell warm-up to six-fold workshops. Ink-and-paper palette, touch-first, in English, French and Spanish.",
+  "entrypoint": "index.html",
+  "license": "MIT",
+  "controls": [
+    "Tap a dashed fold line between two columns or rows, then tap an arrow to fold that side over — or use the arrow keys to fold through the middle.",
+    "The folding side must be no wider than the side that stays in place.",
+    "U to undo, R to restart the sheet. Ink merges; overlapping grains or grain-and-ink refuse the fold."
+  ],
+  "genre": [
+    "Puzzle",
+    "Abstract"
+  ],
+  "themes": [
+    "Paper",
+    "Folding",
+    "Logic"
+  ],
+  "credits": [
+    "A game by Cédric Bernadac, created with AI agents (ZCode & Kimi K3.1 Pro)."
+  ],
+  "cover": "cover.png"
+}

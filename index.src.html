@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Pli</title>
+  <meta name="description" content="Pli — a paper-folding puzzle. Ink stains merge, grains of sand never overlap; fold until one stain rests on the target.">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <div id="app">
+    <header id="top">
+      <div class="brand">
+        <h1>PLI</h1>
+        <p id="tagline"></p>
+      </div>
+      <div class="topctl">
+        <div id="langs" class="langs" role="group" aria-label="Language"></div>
+        <button id="btn-sound" class="ghost"></button>
+      </div>
+    </header>
+
+    <main>
+      <section id="home" class="screen">
+        <p class="subtitle" data-i18n="subtitle"></p>
+        <div class="homebtns">
+          <button id="btn-play" class="primary big"></button>
+          <button id="btn-howto" class="big"></button>
+        </div>
+        <div id="levelgrid" class="levelgrid"></div>
+        <p class="keys" data-i18n="touchHint"></p>
+      </section>
+
+      <section id="game" class="screen hidden">
+        <div class="hud">
+          <button id="btn-menu" class="ghost"></button>
+          <div class="hud-mid">
+            <span id="hud-level"></span>
+            <span id="hud-moves"></span>
+          </div>
+          <div class="hud-right">
+            <button id="btn-undo" class="ghost"></button>
+            <button id="btn-restart" class="ghost"></button>
+          </div>
+        </div>
+        <p id="fold-hint" class="fold-hint"></p>
+        <div id="sheet-wrap"><div id="sheet" tabindex="0" aria-label="Pli sheet"></div></div>
+        <div id="foldbtns"></div>
+        <p class="keys" data-i18n="keysHint"></p>
+      </section>
+    </main>
+
+    <footer>
+      <span data-i18n="credit"></span>
+    </footer>
+  </div>
+
+  <div id="toast" role="status"></div>
+
+  <div id="overlay" class="hidden" role="dialog" aria-modal="true">
+    <div id="overlay-card"></div>
+  </div>
+
+  <script src="assets/engine.js"></script>
+  <script src="assets/levels.js"></script>
+  <script src="assets/i18n.js"></script>
+  <script src="assets/audio.js"></script>
+  <script src="assets/ui.js"></script>
+</body>
+</html>

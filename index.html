@@ -1,0 +1,1282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Pli</title>
+  <meta name="description" content="Pli — a paper-folding puzzle. Ink stains merge, grains of sand never overlap; fold until one stain rests on the target.">
+  <style>
+/* Pli — feuille de style. Palette « papier & encre » : ivoire, sépia, vermillon. */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+
+:root {
+  --table: #e9dfc6;      /* table de l'atelier */
+  --table-deep: #d9cba6;
+  --paper: #faf5e6;      /* la feuille */
+  --paper-shade: #f1e9d2;
+  --ink: #c23b28;        /* encre vermillon */
+  --ink-deep: #9d2c1c;
+  --grain: #2b2620;      /* grain de sable */
+  --sepia: #6b5b45;      /* textes, cibles */
+  --sepia-dark: #3f3529;
+  --line: rgba(107, 91, 69, 0.55);
+}
+
+body {
+  font-family: Georgia, "Times New Roman", serif;
+  background:
+    radial-gradient(ellipse at 20% -10%, rgba(255, 252, 240, 0.75), transparent 55%),
+    linear-gradient(160deg, var(--table) 0%, var(--table-deep) 100%) fixed;
+  color: var(--sepia-dark);
+  min-height: 100vh;
+  overflow-x: hidden;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#app {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 14px 14px 8px;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---------------------------------------------------------------- en-tête */
+#top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.brand h1 {
+  font-weight: 600;
+  font-size: clamp(34px, 7vw, 50px);
+  letter-spacing: 0.34em;
+  color: var(--sepia-dark);
+}
+#tagline { color: var(--sepia); font-size: 13.5px; font-style: italic; letter-spacing: 0.05em; }
+.topctl { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+.langs { display: flex; gap: 4px; }
+
+/* ---------------------------------------------------------------- boutons */
+button {
+  font: inherit;
+  color: var(--sepia-dark);
+  background: var(--paper);
+  border: 1px solid rgba(107, 91, 69, 0.45);
+  border-radius: 8px;
+  padding: 8px 14px;
+  cursor: pointer;
+  transition: transform 0.08s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  box-shadow: 0 1px 3px rgba(63, 53, 41, 0.18);
+}
+button:hover { border-color: var(--sepia); }
+button:active { transform: scale(0.96); }
+button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+button.primary {
+  background: var(--ink);
+  color: #faf3e6;
+  font-weight: 700;
+  border-color: var(--ink-deep);
+}
+button.primary.alt { background: var(--paper); color: var(--sepia-dark); border: 1px solid rgba(107,91,69,.45); }
+button.big { font-size: 17px; padding: 12px 26px; }
+button.ghost { background: transparent; box-shadow: none; }
+.pill { padding: 4px 10px; font-size: 12px; border-radius: 999px; }
+.pill.active { border-color: var(--ink); color: var(--ink); font-weight: 700; }
+
+/* ---------------------------------------------------------------- écrans */
+main { flex: 1; display: flex; flex-direction: column; }
+.screen { animation: fadein 0.25s ease; }
+.hidden { display: none !important; }
+@keyframes fadein { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; } }
+
+.subtitle { margin: 20px 4px 18px; max-width: 54ch; line-height: 1.6; font-size: 15.5px; }
+.homebtns { display: flex; gap: 10px; flex-wrap: wrap; margin: 0 4px 18px; }
+.keys { color: var(--sepia); font-size: 12.5px; margin: 14px 4px; text-align: center; }
+
+.levelgrid { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px; }
+.chip {
+  width: 52px; height: 58px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  font-size: 17px;
+}
+.chip.locked { opacity: 0.4; cursor: default; }
+.chip-stars { font-size: 9px; color: var(--ink); letter-spacing: 1px; margin-top: 2px; min-height: 11px; }
+
+/* ---------------------------------------------------------------- hud */
+.hud { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 10px 0 2px; }
+.hud-mid { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0; }
+#hud-level { font-size: 15px; font-style: italic; }
+#hud-moves { font-size: 12.5px; color: var(--sepia); }
+.hud-right { display: flex; gap: 6px; align-items: center; }
+#btn-undo, #btn-restart, #btn-menu { font-size: 13px; padding: 8px 10px; }
+.fold-hint { text-align: center; color: var(--sepia); font-size: 13px; font-style: italic; margin: 8px 0 4px; min-height: 18px; }
+
+/* ---------------------------------------------------------------- la feuille */
+#sheet-wrap { display: flex; justify-content: center; perspective: 900px; margin-top: 6px; }
+#sheet {
+  position: relative;
+  background:
+    linear-gradient(135deg, rgba(255,255,255,0.5), transparent 40%),
+    var(--paper);
+  border-radius: 3px;
+  box-shadow: 0 2px 4px rgba(63, 53, 41, 0.2), 0 14px 34px rgba(63, 53, 41, 0.28);
+  outline: none;
+}
+#sheet.shake { animation: shake 0.28s ease; }
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  50% { transform: translateX(4px); }
+  75% { transform: translateX(-2px); }
+}
+
+.sq { position: absolute; }
+.ink {
+  position: absolute;
+  left: 16%; top: 16%; width: 68%; height: 68%;
+  background: radial-gradient(circle at 38% 32%, #d9553f, var(--ink) 55%, var(--ink-deep) 92%);
+  box-shadow: 0 1px 3px rgba(157, 44, 28, 0.45), inset 0 -2px 5px rgba(120, 25, 12, 0.5);
+  animation: settle 0.35s ease;
+}
+@keyframes settle { from { transform: scale(0.55); opacity: 0.85; } }
+.grain {
+  position: absolute;
+  left: 38%; top: 38%; width: 24%; height: 24%;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #5a5148, var(--grain) 70%);
+  box-shadow: 0 1px 2px rgba(43, 38, 32, 0.6);
+}
+.target {
+  position: absolute;
+  left: 18%; top: 18%; width: 64%; height: 64%;
+  border-radius: 50%;
+  border: 2px dashed var(--line);
+  box-shadow: inset 0 0 0 4px rgba(250, 245, 230, 0.7);
+  animation: breathe 3s ease-in-out infinite;
+}
+.target::after {
+  content: "";
+  position: absolute;
+  left: 44%; top: 44%;
+  width: 12%; height: 12%;
+  border-radius: 50%;
+  background: var(--sepia);
+  opacity: 0.55;
+}
+@keyframes breathe { 50% { border-color: var(--sepia); } }
+
+/* gouttières */
+.gutter {
+  position: absolute;
+  z-index: 5;
+  cursor: pointer;
+}
+.gutter.gv { width: 30px; margin-left: -15px; top: 0; }
+.gutter.gh { height: 30px; margin-top: -15px; left: 0; }
+.gutter.gv::before {
+  content: ""; position: absolute; left: 50%; top: 6px; bottom: 6px; width: 0;
+  border-left: 1px dashed rgba(107, 91, 69, 0.0);
+  transition: border-color 0.15s ease;
+}
+.gutter.gv::before { left: 50%; }
+.gutter.gv:hover::before, .gutter.gv.sel::before { border-left: 2px dashed var(--line); }
+.gutter.gh::before {
+  content: ""; position: absolute; top: 50%; left: 6px; right: 6px; height: 0;
+  border-top: 1px dashed rgba(107, 91, 69, 0.0);
+  transition: border-color 0.15s ease;
+}
+.gutter.gh:hover::before, .gutter.gh.sel::before { border-top: 2px dashed var(--line); }
+
+/* volet de pliage */
+.flap {
+  position: absolute;
+  z-index: 8;
+  background: var(--paper);
+  box-shadow: 0 8px 26px rgba(63, 53, 41, 0.35);
+  transition: transform 0.32s ease-in;
+  backface-visibility: hidden;
+}
+
+/* toast */
+#toast {
+  position: fixed;
+  left: 50%; bottom: 86px;
+  transform: translateX(-50%) translateY(8px);
+  background: var(--sepia-dark);
+  color: #f4edda;
+  padding: 9px 16px;
+  border-radius: 8px;
+  font-size: 13.5px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  max-width: 88vw;
+  text-align: center;
+  z-index: 20;
+}
+#toast.on { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+#foldbtns {
+  display: flex; gap: 10px; justify-content: center;
+  margin-top: 14px; min-height: 44px; flex-wrap: wrap;
+}
+.foldbtn { min-width: 130px; }
+
+/* ---------------------------------------------------------------- overlays */
+#overlay {
+  position: fixed; inset: 0;
+  background: rgba(63, 53, 41, 0.45);
+  backdrop-filter: blur(2px);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 10;
+  padding: 20px;
+  animation: fadein 0.2s ease;
+}
+#overlay-card {
+  background: var(--paper);
+  border: 1px solid rgba(107, 91, 69, 0.4);
+  border-radius: 12px;
+  padding: 26px 24px;
+  max-width: 430px;
+  width: 100%;
+  box-shadow: 0 18px 50px rgba(63, 53, 41, 0.4);
+  text-align: center;
+}
+#overlay-card h2 { font-weight: 600; margin-bottom: 12px; font-size: 25px; letter-spacing: 0.04em; }
+.rules { text-align: left; }
+.rules p { margin: 10px 0; line-height: 1.6; font-size: 14.5px; }
+#overlay-card button { margin-top: 14px; }
+.btn-row { display: flex; gap: 8px; justify-content: center; }
+.big { font-size: 19px; }
+.star-row { font-size: 38px; margin: 6px 0 10px; letter-spacing: 6px; }
+.star { color: rgba(107, 91, 69, 0.25); }
+.star.on { color: var(--ink); text-shadow: 0 0 14px rgba(194, 59, 40, 0.4); animation: pop 0.4s ease; }
+@keyframes pop { from { transform: scale(0.3); opacity: 0; } to { transform: scale(1); } }
+
+/* ---------------------------------------------------------------- pied */
+footer {
+  margin-top: 18px;
+  padding: 10px 4px 6px;
+  color: var(--sepia);
+  font-size: 12px;
+  text-align: center;
+  font-style: italic;
+}
+@supports (padding: env(safe-area-inset-bottom)) {
+  footer { padding-bottom: calc(6px + env(safe-area-inset-bottom)); }
+}
+
+</style>
+</head>
+<body>
+  <div id="app">
+    <header id="top">
+      <div class="brand">
+        <h1>PLI</h1>
+        <p id="tagline"></p>
+      </div>
+      <div class="topctl">
+        <div id="langs" class="langs" role="group" aria-label="Language"></div>
+        <button id="btn-sound" class="ghost"></button>
+      </div>
+    </header>
+
+    <main>
+      <section id="home" class="screen">
+        <p class="subtitle" data-i18n="subtitle"></p>
+        <div class="homebtns">
+          <button id="btn-play" class="primary big"></button>
+          <button id="btn-howto" class="big"></button>
+        </div>
+        <div id="levelgrid" class="levelgrid"></div>
+        <p class="keys" data-i18n="touchHint"></p>
+      </section>
+
+      <section id="game" class="screen hidden">
+        <div class="hud">
+          <button id="btn-menu" class="ghost"></button>
+          <div class="hud-mid">
+            <span id="hud-level"></span>
+            <span id="hud-moves"></span>
+          </div>
+          <div class="hud-right">
+            <button id="btn-undo" class="ghost"></button>
+            <button id="btn-restart" class="ghost"></button>
+          </div>
+        </div>
+        <p id="fold-hint" class="fold-hint"></p>
+        <div id="sheet-wrap"><div id="sheet" tabindex="0" aria-label="Pli sheet"></div></div>
+        <div id="foldbtns"></div>
+        <p class="keys" data-i18n="keysHint"></p>
+      </section>
+    </main>
+
+    <footer>
+      <span data-i18n="credit"></span>
+    </footer>
+  </div>
+
+  <div id="toast" role="status"></div>
+
+  <div id="overlay" class="hidden" role="dialog" aria-modal="true">
+    <div id="overlay-card"></div>
+  </div>
+
+  <script>
+/*
+ * Pli — moteur de jeu pur (sans DOM), partagé navigateur / tests Node.
+ * Papier rectangulaire ; cases : encre (1), grain (2), cible (4) — bits cumulables.
+ * Pli le long d'une gouttière (entre deux colonnes/lignes) dans 4 directions ;
+ * la partie mobile (la plus petite ou égale) se retourne en miroir sur la fixe.
+ * Chevauchements interdits : grain+grain, encre+grain → le pli est refusé.
+ * Encre+encre → fusion. Victoire : une seule tache d'encre, posée sur la cible.
+ */
+(function (root, factory) {
+  if (typeof module === 'object' && module.exports) module.exports = factory();
+  else root.PliEngine = factory();
+})(typeof self !== 'undefined' ? self : this, function () {
+  'use strict';
+
+  var INK = 1, GRAIN = 2, TARGET = 4;
+
+  function parseLevel(level) {
+    var rows = level.grid, h = rows.length, w = rows[0].length;
+    var cells = new Array(w * h).fill(0);
+    for (var r = 0; r < h; r++) {
+      if (rows[r].length !== w) throw new Error('grille non rectangulaire : ' + level.name);
+      for (var c = 0; c < w; c++) {
+        var ch = rows[r][c], v = 0;
+        if (ch === 'i') v = INK;
+        else if (ch === '#') v = GRAIN;
+        else if (ch === 't') v = TARGET;
+        else if (ch !== '.') throw new Error('caractère inconnu « ' + ch + ' » : ' + level.name);
+        cells[r * w + c] = v;
+      }
+    }
+    var targets = 0, inks = 0;
+    for (var k = 0; k < cells.length; k++) {
+      if (cells[k] & TARGET) targets++;
+      if (cells[k] & INK) inks++;
+    }
+    if (targets !== 1) throw new Error(level.name + ' : il faut exactement une cible (' + targets + ')');
+    if (inks < 1) throw new Error(level.name + ' : aucune encre');
+    return { w: w, h: h, cells: cells, name: level.name, par: level.par || null };
+  }
+
+  function createState(level) {
+    var p = parseLevel(level);
+    return { w: p.w, h: p.h, cells: p.cells, name: p.name, par: p.par,
+             folds: 0, won: false, history: [] };
+  }
+
+  function countInk(state) {
+    var n = 0;
+    for (var k = 0; k < state.cells.length; k++) if (state.cells[k] & INK) n++;
+    return n;
+  }
+
+  function checkWon(state) {
+    if (countInk(state) !== 1) return false;
+    for (var k = 0; k < state.cells.length; k++)
+      if ((state.cells[k] & INK) && (state.cells[k] & TARGET)) return true;
+    return false;
+  }
+
+  /*
+   * Pli. axis 'v' (gouttière verticale, g ∈ [1, w-1]) ou 'h' (g ∈ [1, h-1]).
+   * dir 'L' (partie droite se replie vers la gauche), 'R', 'U' (bas vers haut), 'D'.
+   * Légalité : la partie mobile ne doit pas être plus grande que la partie fixe.
+   * Chevauchements : grain+grain et encre+grain interdits (pli refusé entier).
+   * Chaque case du nouveau rectangle fusionne sa case fixe et, si elle est
+   * couverte, la case mobile miroir.
+   */
+  function attemptFold(state, axis, g, dir) {
+    if (state.won) return { ok: false, reason: 'won' };
+    var len = axis === 'v' ? state.w : state.h;
+    if (!(g >= 1 && g <= len - 1)) return { ok: false, reason: 'gutter' };
+    var mobile = ((axis === 'v' && dir === 'L') || (axis === 'h' && dir === 'U')) ? len - g : g;
+    var fixed = len - mobile;
+    if (mobile > fixed) return { ok: false, reason: 'too-big' };
+
+    state.history.push({ cells: state.cells.slice(), w: state.w, h: state.h, folds: state.folds });
+
+    var nw = axis === 'v' ? fixed : state.w;
+    var nh = axis === 'h' ? fixed : state.h;
+    var out = new Array(nw * nh).fill(0);
+
+    for (var r = 0; r < nh; r++) {
+      for (var c = 0; c < nw; c++) {
+        // case fixe (ancien repère) : le côté ancré reste en place
+        var fc = c, fr = r;
+        // case mobile miroir (ancien repère), si la case est couverte
+        var mc = -1, mr = -1;
+        if (axis === 'v') {
+          if (dir === 'L') { mc = 2 * fixed - 1 - c; mr = r; }        // ancre colonnes 0..fixed-1
+          else { fc = c + mobile; mc = mobile - 1 - c; mr = r; }      // ancre colonnes mobile..len-1
+        } else {
+          if (dir === 'U') { mr = 2 * fixed - 1 - r; mc = c; }        // ancre lignes 0..fixed-1
+          else { fr = r + mobile; mr = mobile - 1 - r; mc = c; }      // ancre lignes mobile..len-1
+        }
+        var fv = state.cells[fr * state.w + fc];
+        var mv = 0;
+        if (mc >= 0 && mc < state.w && mr >= 0 && mr < state.h)
+          mv = state.cells[mr * state.w + mc];
+
+        if ((fv & GRAIN) && (mv & GRAIN)) { restore(state); return { ok: false, reason: 'grain+grain' }; }
+        if (((fv & GRAIN) && (mv & INK)) || ((fv & INK) && (mv & GRAIN))) { restore(state); return { ok: false, reason: 'ink+grain' }; }
+
+        out[r * nw + c] = fv | mv;
+      }
+    }
+
+    state.cells = out; state.w = nw; state.h = nh; state.folds++;
+    state.won = checkWon(state);
+    return { ok: true, won: state.won, w: nw, h: nh };
+  }
+
+  function restore(state) {
+    var prev = state.history.pop();
+    state.cells = prev.cells; state.w = prev.w; state.h = prev.h; state.folds = prev.folds;
+  }
+
+  function undo(state) {
+    if (!state.history.length || state.won) return false;
+    var prev = state.history.pop();
+    state.cells = prev.cells; state.w = prev.w; state.h = prev.h; state.folds = prev.folds;
+    state.won = checkWon(state);
+    return true;
+  }
+
+  // Solveur BFS (tests) : liste des plis légaux pour l'état.
+  function legalFolds(state) {
+    var res = [];
+    ['v', 'h'].forEach(function (axis) {
+      var len = axis === 'v' ? state.w : state.h;
+      for (var g = 1; g <= len - 1; g++) {
+        var dirs = axis === 'v' ? ['L', 'R'] : ['U', 'D'];
+        dirs.forEach(function (dir) {
+          var probe = { w: state.w, h: state.h, cells: state.cells, folds: state.folds,
+                        won: false, history: [] };
+          var r = attemptFold(probe, axis, g, dir);
+          if (r.ok) res.push({ axis: axis, g: g, dir: dir });
+        });
+      }
+    });
+    return res;
+  }
+
+  function stateKey(state) {
+    return state.w + 'x' + state.h + ':' + state.cells.join(',');
+  }
+
+  function solve(state) {
+    var init = { w: state.w, h: state.h, cells: state.cells, folds: 0, won: checkWon(state), history: [] };
+    if (init.won) return 0;
+    var dist = {}; dist[stateKey(init)] = 0;
+    var queue = [init], head = 0;
+    while (head < queue.length) {
+      var cur = queue[head++];
+      var moves = legalFolds(cur);
+      for (var i = 0; i < moves.length; i++) {
+        var m = moves[i];
+        var probe = { w: cur.w, h: cur.h, cells: cur.cells, folds: cur.folds,
+                      won: cur.won, history: [] };
+        var r = attemptFold(probe, m.axis, m.g, m.dir);
+        if (!r.ok) continue;
+        if (probe.won) return dist[stateKey(cur)] + 1;
+        var k = stateKey(probe);
+        if (dist[k] === undefined) { dist[k] = dist[stateKey(cur)] + 1; queue.push(probe); }
+      }
+    }
+    return -1;
+  }
+
+  return { INK: INK, GRAIN: GRAIN, TARGET: TARGET, parseLevel: parseLevel,
+           createState: createState, attemptFold: attemptFold, undo: undo,
+           countInk: countInk, checkWon: checkWon, legalFolds: legalFolds,
+           stateKey: stateKey, solve: solve };
+});
+
+</script>
+  <script>
+/*
+ * Pli — niveaux. '.' papier, 'i' tache d'encre, '#' grain de sable, 't' cible.
+ * Niveaux 3-12 générés par dépliage inverse (games/pli-dev/tools/gen.mjs,
+ * solvabilité garantie par construction) puis optimaux recalculés par BFS.
+ * `par` = nombre de plis optimal, prouvé par BFS (games/pli-dev/tests).
+ */
+(function (root, factory) {
+  if (typeof module === 'object' && module.exports) module.exports = factory();
+  else root.PliLevels = factory();
+})(typeof self !== 'undefined' ? self : this, function () {
+  'use strict';
+  return {
+    levels: [
+      { name: 'Premier pli', par: 1, grid: [
+        'it'
+      ]},
+      { name: 'Croisé', par: 2, grid: [
+        'i.',
+        '.t'
+      ]},
+      { name: 'Le ticket', par: 2, grid: [
+        '..',
+        'i.',
+        'i.',
+        'i.',
+        't#',
+        '##'
+      ]},
+      { name: 'Le billet', par: 3, grid: [
+        'ii..',
+        'ti..',
+        'ii#.',
+        '#.#.'
+      ]},
+      { name: 'L’enveloppe', par: 3, grid: [
+        'ii.',
+        'i..',
+        'ti#',
+        '.#.'
+      ]},
+      { name: 'Le paravent', par: 4, grid: [
+        'iii.#i',
+        'ii...t',
+        '.....#'
+      ]},
+      { name: 'La lettre', par: 5, grid: [
+        '......',
+        '.....i',
+        '.i.i..',
+        't.....'
+      ]},
+      { name: 'Le carton', par: 5, grid: [
+        'i..i..',
+        'ii.ii.',
+        '....t.',
+        '.#...#'
+      ]},
+      { name: 'L’affiche', par: 5, grid: [
+        '.it.',
+        '.i..',
+        'ii..',
+        '..#.',
+        '...#',
+        'i..#'
+      ]},
+      { name: 'Le grand cahier', par: 6, grid: [
+        '...ti.',
+        'i...i.',
+        'i...i.',
+        '......',
+        '..#..#',
+        '.i....'
+      ]},
+      { name: 'La fresque', par: 6, grid: [
+        '..i...',
+        '..i#.i',
+        'it....',
+        '......',
+        '....#.',
+        '..i..i'
+      ]},
+      { name: 'L’atelier', par: 6, grid: [
+        't.....',
+        '......',
+        'iii..i',
+        '#...#.',
+        '......',
+        '.i....'
+      ]}
+    ]
+  };
+});
+
+</script>
+  <script>
+/*
+ * Pli — interface multilingue (EN par défaut, FR, ES).
+ */
+(function (root, factory) {
+  if (typeof module === 'object' && module.exports) module.exports = factory();
+  else root.PliI18n = factory();
+})(typeof self !== 'undefined' ? self : this, function () {
+  'use strict';
+  var dict = {
+    en: {
+      tagline: "A paper-folding puzzle",
+      subtitle: "Fold the sheet along any dashed line. Ink stains merge when they meet; grains of sand never overlap. Rest one single stain on the target.",
+      play: "Play",
+      continueGame: "Continue",
+      howTo: "How to play",
+      rulesTitle: "How to play",
+      rule1: "Tap a dashed line between two columns or rows, then tap an arrow: that side of the sheet folds over along the line. The folding side must be no wider than the side that stays in place.",
+      rule2: "Ink merges with ink — two stains that land on the same spot become one stain.",
+      rule3: "Sand never overlaps: the fold is refused if two grains, or a grain and a stain, would land on each other.",
+      rule4: "You win when exactly one stain remains and it rests exactly on the target. Fewer folds earn brighter stars.",
+      foldHint: "Choose a fold line, then an arrow",
+      foldLeft: "Fold left",
+      foldRight: "Fold right",
+      foldUp: "Fold up",
+      foldDown: "Fold down",
+      moves: "folds",
+      movesOne: "fold",
+      par: "par",
+      level: "Sheet",
+      undo: "Undo",
+      restart: "Restart",
+      menu: "Menu",
+      next: "Next sheet",
+      replay: "Replay",
+      wonTitle: "One stain, on target!",
+      finalTitle: "The last fold",
+      finalBody: "Every sheet is folded. The workshop is tidy.",
+      total: "Total folds",
+      replayAll: "Start over",
+      keysHint: "Arrows: fold through the middle · U: undo · R: restart",
+      touchHint: "Tap a fold line, then an arrow",
+      blockedGrainGrain: "Two grains would overlap — fold refused.",
+      blockedInkGrain: "A stain would land on a grain — fold refused.",
+      blockedTooBig: "That side is too wide to fold over — fold the other way.",
+      blockedGutter: "No fold line there.",
+      langLabel: "Language",
+      soundOn: "Sound on",
+      soundOff: "Sound off",
+      close: "Close",
+      credit: "A game by Cédric Bernadac, created with AI agents.",
+      gotIt: "Got it"
+    },
+    fr: {
+      tagline: "Un puzzle de pliage",
+      subtitle: "Pliez la feuille le long d'une ligne pointillée. Les taches d'encre fusionnent quand elles se rencontrent ; les grains de sable ne se chevauchent jamais. Posez une tache unique sur la cible.",
+      play: "Jouer",
+      continueGame: "Continuer",
+      howTo: "Comment jouer",
+      rulesTitle: "Comment jouer",
+      rule1: "Touchez une ligne pointillée entre deux colonnes ou deux rangées, puis une flèche : ce côté de la feuille se replie le long de la ligne. Le côté replié ne doit pas être plus large que le côté qui reste en place.",
+      rule2: "L'encre fusionne avec l'encre — deux taches qui atterrissent au même endroit n'en forment plus qu'une seule.",
+      rule3: "Le sable ne se chevauche jamais : le pli est refusé si deux grains, ou un grain et une tache, se superposeraient.",
+      rule4: "Vous gagnez quand il ne reste exactement qu'une tache et qu'elle repose sur la cible. Moins de plis, plus d'étoiles.",
+      foldHint: "Choisissez une ligne de pli, puis une flèche",
+      foldLeft: "Plier à gauche",
+      foldRight: "Plier à droite",
+      foldUp: "Plier vers le haut",
+      foldDown: "Plier vers le bas",
+      moves: "plis",
+      movesOne: "pli",
+      par: "par",
+      level: "Feuille",
+      undo: "Annuler",
+      restart: "Recommencer",
+      menu: "Menu",
+      next: "Feuille suivante",
+      replay: "Rejouer",
+      wonTitle: "Une tache, sur la cible !",
+      finalTitle: "Le dernier pli",
+      finalBody: "Toutes les feuilles sont pliées. L'atelier est rangé.",
+      total: "Total de plis",
+      replayAll: "Tout recommencer",
+      keysHint: "Flèches : pli par le milieu · U : annuler · R : recommencer",
+      touchHint: "Touchez une ligne de pli, puis une flèche",
+      blockedGrainGrain: "Deux grains se chevaucheraient — pli refusé.",
+      blockedInkGrain: "Une tache tomberait sur un grain — pli refusé.",
+      blockedTooBig: "Ce côté est trop large pour se replier — pliez dans l'autre sens.",
+      blockedGutter: "Pas de ligne de pli ici.",
+      langLabel: "Langue",
+      soundOn: "Son activé",
+      soundOff: "Son coupé",
+      close: "Fermer",
+      credit: "Un jeu de Cédric Bernadac, créé avec des agents IA.",
+      gotIt: "Compris"
+    },
+    es: {
+      tagline: "Un puzle de plegados",
+      subtitle: "Dobla la hoja por cualquier línea de puntos. Las manchas de tinta se funden al encontrarse; los granos de arena nunca se superponen. Deja una sola mancha sobre la diana.",
+      play: "Jugar",
+      continueGame: "Continuar",
+      howTo: "Cómo jugar",
+      rulesTitle: "Cómo jugar",
+      rule1: "Toca una línea de puntos entre dos columnas o filas y luego una flecha: ese lado de la hoja se dobla por la línea. El lado que se dobla no debe ser más ancho que el lado que se queda quieto.",
+      rule2: "La tinta se funde con la tinta: dos manchas que caen en el mismo sitio se vuelven una sola.",
+      rule3: "La arena nunca se superpone: el doblez se rechaza si dos granos, o un grano y una mancha, coincidirían.",
+      rule4: "Ganas cuando queda exactamente una mancha y descansa sobre la diana. Menos dobleces, más estrellas.",
+      foldHint: "Elige una línea de pliegue y luego una flecha",
+      foldLeft: "Doblar a la izquierda",
+      foldRight: "Doblar a la derecha",
+      foldUp: "Doblar hacia arriba",
+      foldDown: "Doblar hacia abajo",
+      moves: "pliegues",
+      movesOne: "pliegue",
+      par: "par",
+      level: "Hoja",
+      undo: "Deshacer",
+      restart: "Reiniciar",
+      menu: "Menú",
+      next: "Hoja siguiente",
+      replay: "Repetir",
+      wonTitle: "¡Una mancha, en la diana!",
+      finalTitle: "El último pliegue",
+      finalBody: "Todas las hojas están dobladas. El taller está en orden.",
+      total: "Total de pliegues",
+      replayAll: "Empezar de nuevo",
+      keysHint: "Flechas: doblez por el centro · U: deshacer · R: reiniciar",
+      touchHint: "Toca una línea de pliegue y luego una flecha",
+      blockedGrainGrain: "Dos granos se superpondrían: doblez rechazado.",
+      blockedInkGrain: "Una mancha caería sobre un grano: doblez rechazado.",
+      blockedTooBig: "Ese lado es demasiado ancho: dobla al otro lado.",
+      blockedGutter: "Ahí no hay línea de pliegue.",
+      langLabel: "Idioma",
+      soundOn: "Sonido activado",
+      soundOff: "Sonido silenciado",
+      close: "Cerrar",
+      credit: "Un juego de Cédric Bernadac, creado con agentes de IA.",
+      gotIt: "Entendido"
+    }
+  };
+  return {
+    langs: ['en', 'fr', 'es'],
+    dict: dict,
+    get: function (lang, key) {
+      var d = dict[lang] || dict.en;
+      return d[key] !== undefined ? d[key] : dict.en[key];
+    }
+  };
+});
+
+</script>
+  <script>
+/*
+ * Pli — mini-synthé WebAudio (aucun asset externe) : papier, encre, étoiles.
+ */
+(function (root, factory) {
+  if (typeof module === 'object' && module.exports) module.exports = factory(root);
+  else root.PliAudio = factory(root);
+})(typeof self !== 'undefined' ? self : this, function (root) {
+  'use strict';
+  var ctx = null, enabled = true, noiseBuf = null;
+
+  function ensure() {
+    if (!ctx) {
+      var AC = root.AudioContext || root.webkitAudioContext;
+      if (!AC) return null;
+      ctx = new AC();
+    }
+    if (ctx.state === 'suspended') ctx.resume();
+    return ctx;
+  }
+
+  function noise(c) {
+    if (!noiseBuf) {
+      noiseBuf = c.createBuffer(1, c.sampleRate * 0.25, c.sampleRate);
+      var data = noiseBuf.getChannelData(0);
+      for (var i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+    }
+    return noiseBuf;
+  }
+
+  // froissement de papier : bruit bref filtré passe-bande + envelope
+  function fold() {
+    if (!enabled) return;
+    try {
+      var c = ensure();
+      if (!c) return;
+      var src = c.createBufferSource();
+      src.buffer = noise(c);
+      var f = c.createBiquadFilter();
+      f.type = 'bandpass'; f.frequency.value = 1400; f.Q.value = 0.8;
+      var g = c.createGain();
+      var t = c.currentTime;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.16, t + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.16);
+      src.connect(f); f.connect(g); g.connect(c.destination);
+      src.start(t); src.stop(t + 0.2);
+    } catch (e) { /* audio indisponible : silence */ }
+  }
+
+  function tone(freq, dur, type, gain, when) {
+    if (!enabled) return;
+    try {
+      var c = ensure();
+      if (!c) return;
+      var t = c.currentTime + (when || 0);
+      var o = c.createOscillator(), g = c.createGain();
+      o.type = type || 'sine';
+      o.frequency.setValueAtTime(freq, t);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(gain || 0.1, t + 0.012);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      o.connect(g); g.connect(c.destination);
+      o.start(t); o.stop(t + dur + 0.05);
+    } catch (e) { /* silence */ }
+  }
+
+  return {
+    setEnabled: function (v) { enabled = !!v; },
+    isEnabled: function () { return enabled; },
+    unlock: function () { ensure(); },
+    fold: fold,
+    blocked: function () { tone(140, 0.1, 'triangle', 0.08); },
+    merge: function () { tone(320, 0.12, 'sine', 0.07, 0.1); },
+    ui: function () { tone(760, 0.045, 'sine', 0.05); },
+    star: function (i) { tone(620 + i * 200, 0.12, 'sine', 0.08); },
+    win: function () {
+      [523, 659, 784].forEach(function (f, i) { tone(f, 0.18, 'sine', 0.08, i * 0.1); });
+      tone(1046, 0.3, 'sine', 0.05, 0.32);
+    }
+  };
+});
+
+</script>
+  <script>
+/*
+ * Pli — contrôleur d'interface : écrans, feuille de papier, gouttières, plis.
+ */
+(function () {
+  'use strict';
+  var E = window.PliEngine, LV = window.PliLevels.levels, I18N = window.PliI18n, AU = window.PliAudio;
+
+  var SAVE_KEY = 'pli.save.v1';
+  var save = { unlocked: 1, stars: {}, best: {}, lang: 'en', sound: true };
+  try {
+    var raw = localStorage.getItem(SAVE_KEY);
+    if (raw) {
+      var parsed = JSON.parse(raw);
+      save = { unlocked: parsed.unlocked || 1, stars: parsed.stars || {},
+               best: parsed.best || {}, lang: parsed.lang || 'en', sound: parsed.sound !== false };
+    }
+  } catch (e) { /* stockage indisponible */ }
+
+  function persist() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {} }
+  function t(key) { return I18N.get(save.lang, key); }
+  function $(id) { return document.getElementById(id); }
+  function el(tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text !== undefined) n.textContent = text;
+    return n;
+  }
+  function show(node, on) { node.classList.toggle('hidden', !on); }
+
+  var state = null;       // état moteur de la feuille courante
+  var levelIndex = 0;
+  var busy = false;       // animation / victoire en cours
+  var cell = 64;          // taille de case en px
+  var selGutter = null;   // { axis, g } sélectionnée
+
+  // ------------------------------------------------------------------ i18n
+  function renderTexts() {
+    document.documentElement.lang = save.lang;
+    var nodes = document.querySelectorAll('[data-i18n]');
+    for (var i = 0; i < nodes.length; i++) nodes[i].textContent = t(nodes[i].getAttribute('data-i18n'));
+    $('tagline').textContent = t('tagline');
+    $('btn-play').textContent = save.unlocked > 1 ? t('continueGame') : t('play');
+    $('btn-howto').textContent = t('howTo');
+    $('btn-sound').textContent = (save.sound ? '♪ ' : '✕ ') + t(save.sound ? 'soundOn' : 'soundOff');
+    $('btn-undo').textContent = '⟲ ' + t('undo');
+    $('btn-restart').textContent = t('restart');
+    $('btn-menu').textContent = t('menu');
+    renderLangPills();
+    renderLevelGrid();
+    if (state) { renderHud(); renderGutterButtons(); }
+  }
+
+  function renderLangPills() {
+    var box = $('langs');
+    box.textContent = '';
+    I18N.langs.forEach(function (code) {
+      var b = el('button', 'pill' + (save.lang === code ? ' active' : ''), code.toUpperCase());
+      b.addEventListener('click', function () { save.lang = code; persist(); AU.ui(); renderTexts(); });
+      box.appendChild(b);
+    });
+  }
+
+  function renderLevelGrid() {
+    var grid = $('levelgrid');
+    grid.textContent = '';
+    LV.forEach(function (lvl, i) {
+      var locked = i + 1 > save.unlocked;
+      var chip = el('button', 'chip' + (locked ? ' locked' : ''), locked ? '•' : String(i + 1));
+      if (!locked) {
+        var stars = save.stars[i] || 0;
+        chip.appendChild(el('span', 'chip-stars', stars ? '★'.repeat(stars) : ' '));
+        chip.addEventListener('click', function () { AU.ui(); openLevel(i); });
+      }
+      grid.appendChild(chip);
+    });
+  }
+
+  // ------------------------------------------------------------------ rendu
+  function cellSize() {
+    var availW = Math.min(window.innerWidth - 30, 520);
+    var availH = window.innerHeight - 330;
+    return Math.max(34, Math.floor(Math.min(availW / state.w, availH / state.h, 70)));
+  }
+
+  // une tache d'encre : div organique (rayon irrégulier + rotation + taille ∝ rien)
+  function inkStyle(node, seedIdx) {
+    var rots = [8, -12, 20, -5, 14];
+    var rad = ['38% 62% 55% 45% / 55% 42% 58% 45%',
+               '55% 45% 40% 60% / 45% 55% 42% 58%',
+               '48% 52% 60% 40% / 58% 40% 55% 45%',
+               '60% 40% 48% 52% / 42% 58% 45% 55%',
+               '45% 55% 52% 48% / 52% 48% 60% 40%'];
+    node.style.borderRadius = rad[seedIdx % rad.length];
+    node.style.transform = 'rotate(' + rots[seedIdx % rots.length] + 'deg)';
+  }
+
+  function buildSheet(instant) {
+    var sheet = $('sheet');
+    sheet.textContent = '';
+    cell = cellSize();
+    var w = state.w, h = state.h;
+    sheet.style.width = w * cell + 'px';
+    sheet.style.height = h * cell + 'px';
+
+    for (var r = 0; r < h; r++) {
+      for (var c = 0; c < w; c++) {
+        var v = state.cells[r * w + c];
+        var sq = el('div', 'sq');
+        sq.style.left = c * cell + 'px';
+        sq.style.top = r * cell + 'px';
+        sq.style.width = cell + 'px';
+        sq.style.height = cell + 'px';
+        if (v & E.TARGET) {
+          var tg = el('div', 'target');
+          sq.appendChild(tg);
+        }
+        if (v & E.INK) {
+          var ink = el('div', 'ink');
+          inkStyle(ink, r * w + c);
+          sq.appendChild(ink);
+        }
+        if (v & E.GRAIN) sq.appendChild(el('div', 'grain'));
+        sheet.appendChild(sq);
+      }
+    }
+
+    // gouttières cliquables : lignes pointillées entre colonnes / rangées
+    var gutters = el('div', 'gutters');
+    for (var g = 1; g < w; g++) {
+      (function (g) {
+        var line = el('div', 'gutter gv');
+        line.style.left = g * cell + 'px';
+        line.style.height = h * cell + 'px';
+        line.setAttribute('data-axis', 'v');
+        line.setAttribute('data-g', g);
+        line.addEventListener('click', function () { pickGutter('v', g); });
+        gutters.appendChild(line);
+      })(g);
+    }
+    for (var g2 = 1; g2 < h; g2++) {
+      (function (g2) {
+        var line = el('div', 'gutter gh');
+        line.style.top = g2 * cell + 'px';
+        line.style.width = w * cell + 'px';
+        line.setAttribute('data-axis', 'h');
+        line.setAttribute('data-g', g2);
+        line.addEventListener('click', function () { pickGutter('h', g2); });
+        gutters.appendChild(line);
+      })(g2);
+    }
+    sheet.appendChild(gutters);
+    renderGutterSelection();
+    void instant;
+  }
+
+  function renderGutterSelection() {
+    var lines = document.querySelectorAll('.gutter');
+    for (var i = 0; i < lines.length; i++) {
+      var on = selGutter && lines[i].getAttribute('data-axis') === selGutter.axis &&
+               Number(lines[i].getAttribute('data-g')) === selGutter.g;
+      lines[i].classList.toggle('sel', !!on);
+    }
+  }
+
+  function pickGutter(axis, g) {
+    AU.unlock();
+    AU.ui();
+    selGutter = (selGutter && selGutter.axis === axis && selGutter.g === g) ? null : { axis: axis, g: g };
+    renderGutterSelection();
+    renderGutterButtons();
+  }
+
+  function renderGutterButtons() {
+    var box = $('foldbtns');
+    box.textContent = '';
+    $('fold-hint').textContent = selGutter ? '' : t('foldHint');
+    if (!selGutter) return;
+    var vertical = selGutter.axis === 'v';
+    var dirs = vertical ? ['L', 'R'] : ['U', 'D'];
+    dirs.forEach(function (d) {
+      var label = vertical ? (d === 'L' ? '◀ ' + t('foldLeft') : t('foldRight') + ' ▶')
+                           : (d === 'U' ? '▲ ' + t('foldUp') : t('foldDown') + ' ▼');
+      var b = el('button', 'foldbtn primary' + (d === 'L' || d === 'U' ? '' : ' alt'), label);
+      b.addEventListener('click', function () { doFold(selGutter.axis, selGutter.g, d); });
+      box.appendChild(b);
+    });
+  }
+
+  function renderHud() {
+    var lvl = LV[levelIndex];
+    $('hud-level').textContent = t('level') + ' ' + (levelIndex + 1) + ' — ' + lvl.name;
+    $('hud-moves').textContent = state.folds + ' ' + t(state.folds === 1 ? 'movesOne' : 'moves') +
+                                 ' · ' + t('par') + ' ' + lvl.par;
+  }
+
+  function openLevel(i) {
+    levelIndex = i;
+    state = E.createState(LV[i]);
+    busy = false;
+    selGutter = null;
+    show($('home'), false);
+    show($('game'), true);
+    renderHud();
+    buildSheet(true);
+    renderGutterButtons();
+  }
+
+  function goMenu() {
+    state = null; busy = false; selGutter = null;
+    show($('game'), false);
+    show($('home'), true);
+    renderTexts();
+  }
+
+  // ------------------------------------------------------------------ pli
+  function reasonText(reason) {
+    if (reason === 'grain+grain') return t('blockedGrainGrain');
+    if (reason === 'ink+grain') return t('blockedInkGrain');
+    if (reason === 'too-big') return t('blockedTooBig');
+    if (reason === 'gutter') return t('blockedGutter');
+    return '';
+  }
+
+  function toast(msg) {
+    var box = $('toast');
+    box.textContent = msg;
+    box.classList.add('on');
+    clearTimeout(toast._t);
+    toast._t = setTimeout(function () { box.classList.remove('on'); }, 1900);
+  }
+
+  function doFold(axis, g, dir) {
+    if (!state || busy) return;
+    var before = { w: state.w, h: state.h, cells: state.cells.slice() };
+    var r = E.attemptFold(state, axis, g, dir);
+    if (!r.ok) {
+      AU.blocked();
+      toast(reasonText(r.reason));
+      $('sheet').classList.remove('shake');
+      void $('sheet').offsetWidth;
+      $('sheet').classList.add('shake');
+      return;
+    }
+    selGutter = null;
+    AU.fold();
+    if (r.won) {
+      busy = true;
+      animateFold(before, axis, g, dir, function () {
+        AU.win();
+        var stars = starsFor(state.folds, LV[levelIndex].par);
+        save.stars[levelIndex] = Math.max(save.stars[levelIndex] || 0, stars);
+        save.best[levelIndex] = Math.min(save.best[levelIndex] || Infinity, state.folds);
+        if (levelIndex + 2 > save.unlocked) save.unlocked = Math.min(LV.length, levelIndex + 2);
+        persist();
+        setTimeout(function () { showWin(stars); }, 350);
+      });
+      return;
+    }
+    animateFold(before, axis, g, dir, function () {
+      renderHud();
+      buildSheet(true);
+      renderGutterButtons();
+    });
+  }
+
+  // volet qui se rabat : copie de la partie mobile, rotation 3D CSS, puis re-rendu
+  function animateFold(before, axis, g, dir, done) {
+    var sheet = $('sheet');
+    var moving = axis === 'v'
+      ? (dir === 'L' ? before.w - g : g)
+      : (dir === 'U' ? before.h - g : g);
+    var flap = el('div', 'flap');
+    var sizeV = axis === 'v' ? moving * cell : before.w * cell;
+    var sizeH = axis === 'h' ? moving * cell : before.h * cell;
+    // partie mobile : colonnes/lignes [g..] pour L/U, [0..g-1] pour R/D
+    var left = (axis === 'v' && dir === 'L') ? g * cell : 0;
+    var top = (axis === 'h' && dir === 'U') ? g * cell : 0;
+
+    flap.style.left = left + 'px';
+    flap.style.top = top + 'px';
+    flap.style.width = sizeV + 'px';
+    flap.style.height = sizeH + 'px';
+    // contenu de la partie mobile (avant pli)
+    for (var r2 = 0; r2 < before.h; r2++) {
+      for (var c2 = 0; c2 < before.w; c2++) {
+        var inPart = axis === 'v'
+          ? (dir === 'L' ? c2 >= g : c2 < g)
+          : (dir === 'U' ? r2 >= g : r2 < g);
+        if (!inPart) continue;
+        var v = before.cells[r2 * before.w + c2];
+        if (!v) continue;
+        var sq = el('div', 'sq');
+        sq.style.left = (c2 * cell - left) + 'px';
+        sq.style.top = (r2 * cell - top) + 'px';
+        sq.style.width = cell + 'px';
+        sq.style.height = cell + 'px';
+        if (v & E.INK) { var ink = el('div', 'ink'); inkStyle(ink, r2 * before.w + c2); sq.appendChild(ink); }
+        if (v & E.GRAIN) sq.appendChild(el('div', 'grain'));
+        if (v & E.TARGET) sq.appendChild(el('div', 'target'));
+        flap.appendChild(sq);
+      }
+    }
+    // transformation : rotation autour de la gouttière
+    var originX = axis === 'v' ? ((dir === 'L') ? 0 : sizeV) : 0;
+    var originY = axis === 'h' ? ((dir === 'U') ? 0 : sizeH) : 0;
+    flap.style.transformOrigin = originX + 'px ' + originY + 'px';
+    sheet.appendChild(flap);
+    var rot = axis === 'v' ? 'rotateY(' + (dir === 'L' ? '-' : '') + '180deg)'
+                           : 'rotateX(' + (dir === 'U' ? '' : '-') + '180deg)';
+    void flap.offsetWidth;
+    flap.style.transform = rot;
+    setTimeout(function () {
+      flap.remove();
+      done();
+    }, 340);
+  }
+
+  function starsFor(folds, par) {
+    if (folds <= par) return 3;
+    if (folds <= par + 1) return 2;
+    return 1;
+  }
+
+  // ------------------------------------------------------------------ overlays
+  function overlay(content) {
+    var card = $('overlay-card');
+    card.textContent = '';
+    card.appendChild(content);
+    show($('overlay'), true);
+  }
+  function closeOverlay() { show($('overlay'), false); }
+
+  function showRules() {
+    var box = el('div', 'rules');
+    box.appendChild(el('h2', null, t('rulesTitle')));
+    [1, 2, 3, 4].forEach(function (n) { box.appendChild(el('p', null, t('rule' + n))); });
+    var btn = el('button', 'primary', t('gotIt'));
+    btn.addEventListener('click', function () { AU.ui(); closeOverlay(); });
+    box.appendChild(btn);
+    overlay(box);
+  }
+
+  function showWin(stars) {
+    for (var i = 0; i < stars; i++) setTimeout(AU.star.bind(null, i), 250 + i * 180);
+    var box = el('div', 'modal');
+    var isLast = levelIndex === LV.length - 1;
+    if (isLast) {
+      var total = 0;
+      LV.forEach(function (_, i) { total += save.best[i] || 0; });
+      box.appendChild(el('h2', null, t('finalTitle')));
+      box.appendChild(el('p', null, t('finalBody')));
+      box.appendChild(el('p', 'big', t('total') + ' : ' + total));
+      var again = el('button', 'primary', t('replayAll'));
+      again.addEventListener('click', function () {
+        AU.ui(); closeOverlay();
+        save.unlocked = 1; save.stars = {}; save.best = {}; persist();
+        openLevel(0);
+      });
+      box.appendChild(again);
+    } else {
+      box.appendChild(el('h2', null, t('wonTitle')));
+      var row = el('div', 'star-row');
+      for (var s = 0; s < 3; s++) row.appendChild(el('span', 'star' + (s < stars ? ' on' : ''), '★'));
+      box.appendChild(row);
+      box.appendChild(el('p', null, state.folds + ' ' + t(state.folds === 1 ? 'movesOne' : 'moves') +
+        ' · ' + t('par') + ' ' + LV[levelIndex].par));
+      var next = el('button', 'primary', t('next'));
+      next.addEventListener('click', function () { AU.ui(); closeOverlay(); openLevel(levelIndex + 1); });
+      box.appendChild(next);
+    }
+    var replay = el('button', null, t('replay'));
+    replay.addEventListener('click', function () { AU.ui(); closeOverlay(); openLevel(levelIndex); });
+    var menu = el('button', null, t('menu'));
+    menu.addEventListener('click', function () { AU.ui(); closeOverlay(); goMenu(); });
+    var row2 = el('div', 'btn-row');
+    row2.appendChild(replay); row2.appendChild(menu);
+    box.appendChild(row2);
+    overlay(box);
+  }
+
+  // ------------------------------------------------------------------ entrées
+  document.addEventListener('keydown', function (ev) {
+    if (!state) return;
+    var k = ev.key.length === 1 ? ev.key.toLowerCase() : ev.key;
+    if (k === 'u') { ev.preventDefault(); doUndo(); }
+    if (k === 'r') { ev.preventDefault(); doRestart(); }
+    if (k === 'Escape') closeOverlay();
+    // flèches : pli par la gouttière médiane (arrondie) dans la direction choisie
+    var dirMap = { ArrowLeft: 'L', ArrowRight: 'R', ArrowUp: 'U', ArrowDown: 'D' };
+    if (dirMap[k]) {
+      ev.preventDefault();
+      AU.unlock();
+      var d = dirMap[k];
+      var axis = (d === 'L' || d === 'R') ? 'v' : 'h';
+      var len = axis === 'v' ? state.w : state.h;
+      if (len < 2) return;
+      var g = Math.round(len / 2);
+      if (g < 1) g = 1;
+      if (g > len - 1) g = len - 1;
+      doFold(axis, g, d);
+    }
+  });
+
+  function doUndo() {
+    if (!state || busy) return;
+    if (E.undo(state)) { AU.ui(); selGutter = null; renderHud(); buildSheet(true); renderGutterButtons(); }
+  }
+  function doRestart() {
+    if (!state || busy) return;
+    AU.ui(); openLevel(levelIndex);
+  }
+
+  // ------------------------------------------------------------------ boutons
+  $('btn-play').addEventListener('click', function () {
+    AU.ui(); AU.unlock();
+    openLevel(Math.min(save.unlocked, LV.length) - 1);
+  });
+  $('btn-howto').addEventListener('click', function () { AU.ui(); showRules(); });
+  $('btn-sound').addEventListener('click', function () {
+    save.sound = !save.sound; persist();
+    AU.setEnabled(save.sound);
+    renderTexts();
+    if (save.sound) AU.ui();
+  });
+  $('btn-undo').addEventListener('click', function () { AU.unlock(); doUndo(); });
+  $('btn-restart').addEventListener('click', function () { AU.unlock(); doRestart(); });
+  $('btn-menu').addEventListener('click', function () { AU.ui(); goMenu(); });
+  $('overlay').addEventListener('click', function (ev) { if (ev.target === $('overlay')) closeOverlay(); });
+
+  window.addEventListener('resize', function () { if (state && !busy) buildSheet(true); });
+
+  // hook QA (?debug=1) : tests DOM automatisés sans dépendre du rAF
+  if (location.search.indexOf('debug=1') !== -1) {
+    window.__pli = {
+      state: function () { return state; },
+      engine: E,
+      levels: LV,
+      open: openLevel,
+      fold: function (axis, g, dir) { doFold(axis, g, dir); },
+      save: save
+    };
+  }
+
+  // ------------------------------------------------------------------ démarrage
+  AU.setEnabled(save.sound);
+  renderTexts();
+  show($('home'), true);
+})();
+
+</script>
+</body>
+</html>
